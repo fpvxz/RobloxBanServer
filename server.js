@@ -1,67 +1,74 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const app = express();
-const PORT = process.env.PORT || 3000;
+const cors = require("cors");
 
+const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 
-// Store data in memory (you could use a DB instead)
-let bannedUsers = [];
-let frozenUsers = [];
-let shutdownFlag = false;
+let bans = [];
+let freezes = [];
+let announcements = [];
+let locked = false;
+let shutdown = false;
+let kicks = [];
 
-// ================= BAN ROUTES =================
-app.get("/bans", (req, res) => {
-  res.json(bannedUsers);
-});
-
+// ---------------------- BAN ----------------------
+app.get("/bans", (req, res) => res.json(bans));
 app.post("/ban", (req, res) => {
   const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "UserId required" });
-  if (!bannedUsers.includes(userId)) bannedUsers.push(userId);
-  res.json({ success: true, bannedUsers });
+  if (!bans.includes(userId)) bans.push(userId);
+  res.sendStatus(200);
 });
-
 app.post("/unban", (req, res) => {
   const { userId } = req.body;
-  bannedUsers = bannedUsers.filter((id) => id !== userId);
-  res.json({ success: true, bannedUsers });
+  bans = bans.filter(id => id !== userId);
+  res.sendStatus(200);
 });
 
-// ================= FREEZE ROUTES =================
-app.get("/frozen", (req, res) => {
-  res.json(frozenUsers);
+// ---------------------- KICK ----------------------
+app.get("/kicks", (req, res) => {
+  res.json(kicks);
+  kicks = []; // clear after sending so each kick is one-time
+});
+app.post("/kick", (req, res) => {
+  const { userId } = req.body;
+  kicks.push(userId);
+  res.sendStatus(200);
 });
 
+// ---------------------- FREEZE ----------------------
+app.get("/freezes", (req, res) => res.json(freezes));
 app.post("/freeze", (req, res) => {
   const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "UserId required" });
-  if (!frozenUsers.includes(userId)) frozenUsers.push(userId);
-  res.json({ success: true, frozenUsers });
+  if (!freezes.includes(userId)) freezes.push(userId);
+  res.sendStatus(200);
 });
-
 app.post("/unfreeze", (req, res) => {
   const { userId } = req.body;
-  frozenUsers = frozenUsers.filter((id) => id !== userId);
-  res.json({ success: true, frozenUsers });
+  freezes = freezes.filter(id => id !== userId);
+  res.sendStatus(200);
 });
 
-// ================= SHUTDOWN ROUTE =================
-app.get("/shutdown", (req, res) => {
-  res.json({ shutdown: shutdownFlag });
+// ---------------------- ANNOUNCE ----------------------
+app.get("/announcements", (req, res) => {
+  res.json(announcements);
+  announcements = []; // clear after delivery
+});
+app.post("/announce", (req, res) => {
+  const { message } = req.body;
+  announcements.push(message);
+  res.sendStatus(200);
 });
 
-app.post("/shutdown", (req, res) => {
-  shutdownFlag = true;
-  res.json({ success: true });
-});
+// ---------------------- LOCK ----------------------
+app.get("/lock", (req, res) => res.json({ locked }));
+app.post("/lock", (req, res) => { locked = true; res.sendStatus(200); });
+app.post("/unlock", (req, res) => { locked = false; res.sendStatus(200); });
 
-app.post("/cancel-shutdown", (req, res) => {
-  shutdownFlag = false;
-  res.json({ success: true });
-});
+// ---------------------- SHUTDOWN ----------------------
+app.get("/shutdown", (req, res) => res.json({ shutdown }));
+app.post("/shutdown", (req, res) => { shutdown = true; res.sendStatus(200); });
 
-// ================= START =================
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
