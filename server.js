@@ -8,10 +8,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Store banned users in memory
+// =======================
+// Ban system
+// =======================
 let bannedUsers = [];
 
-// ✅ Ban a user
 app.post("/ban", (req, res) => {
   const { userId } = req.body;
   if (!userId) {
@@ -20,29 +21,48 @@ app.post("/ban", (req, res) => {
   if (!bannedUsers.includes(userId)) {
     bannedUsers.push(userId);
   }
-  console.log(`Banned user: ${userId}`);
+  console.log(`🚫 Banned user: ${userId}`);
   res.json({ success: true });
 });
 
-// ✅ Unban a user
 app.post("/unban", (req, res) => {
   const { userId } = req.body;
   if (!userId) {
     return res.status(400).json({ success: false, message: "UserId required" });
   }
   bannedUsers = bannedUsers.filter((id) => id !== userId);
-  console.log(`Unbanned user: ${userId}`);
+  console.log(`✅ Unbanned user: ${userId}`);
   res.json({ success: true });
 });
 
-// ✅ Get all banned users (used by Roblox Studio)
 app.get("/bans", (req, res) => {
   res.json(bannedUsers);
 });
 
-// Default root route
+// =======================
+// Shutdown system
+// =======================
+let shutdownActive = false;
+
+app.post("/shutdown", (req, res) => {
+  shutdownActive = true;
+  console.log("🚨 Shutdown enabled");
+  res.json({ success: true });
+});
+
+app.post("/unshutdown", (req, res) => {
+  shutdownActive = false;
+  console.log("✅ Shutdown disabled");
+  res.json({ success: true });
+});
+
+app.get("/shutdown", (req, res) => {
+  res.json({ shutdown: shutdownActive });
+});
+
+// Root route
 app.get("/", (req, res) => {
-  res.send("✅ Roblox Ban Server is running");
+  res.send("✅ Roblox Admin Server is running");
 });
 
 app.listen(PORT, () => {
