@@ -40,6 +40,31 @@ app.get("/bans", (req, res) => {
 });
 
 // =======================
+// Kick system
+// =======================
+let kickedUsers = [];
+
+app.post("/kick", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "UserId required" });
+  }
+  kickedUsers.push(userId); // temp storage
+  console.log(`👢 Kick requested for user: ${userId}`);
+  res.json({ success: true });
+});
+
+app.get("/kicks", (req, res) => {
+  res.json(kickedUsers);
+});
+
+// After Roblox checks, clear kicks (so it’s one-time)
+app.post("/clear-kicks", (req, res) => {
+  kickedUsers = [];
+  res.json({ success: true });
+});
+
+// =======================
 // Shutdown system
 // =======================
 let shutdownActive = false;
