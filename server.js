@@ -1,56 +1,41 @@
 const express = require("express");
-const cors = require("cors");
+const bodyParser = require("body-parser");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-// ✅ Use Render's assigned port OR fallback to 3000 locally
 const PORT = process.env.PORT || 3000;
 
-// --- In-memory ban list ---
+app.use(bodyParser.json());
+
+// Fake ban list in memory (replace with database if needed)
 let bannedUsers = new Set();
 
-// --- Shutdown flag ---
-let shutdownFlag = false;
+// Ban endpoint
+app.post("/ban", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
 
-// Root route (for testing)
-app.get("/", (req, res) => {
-  res.send("✅ Roblox ban/shutdown server is running!");
-});
-
-// --- Shutdown endpoints ---
-app.get("/shutdown", (req, res) => {
-  shutdownFlag = true;
-  console.log("⚠️ Shutdown requested!");
-  res.send("Shutdown signal sent!");
-});
-
-app.get("/shutdownstatus", (req, res) => {
-  res.json({ shutdown: shutdownFlag });
-});
-
-// --- Ban endpoints ---
-app.post("/ban/:userid", (req, res) => {
-  const userId = req.params.userid;
   bannedUsers.add(userId);
-  console.log(`🚫 User ${userId} banned`);
-  res.send(`User ${userId} has been banned.`);
+  console.log(`✅ User banned: ${userId}`);
+  res.status(200).json({ success: true, userId });
 });
 
-app.post("/unban/:userid", (req, res) => {
-  const userId = req.params.userid;
+// Unban endpoint
+app.post("/unban", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+
   bannedUsers.delete(userId);
-  console.log(`✅ User ${userId} unbanned`);
-  res.send(`User ${userId} has been unbanned.`);
+  console.log(`✅ User unbanned: ${userId}`);
+  res.status(200).json({ success: true, userId });
 });
 
-app.get("/banstatus/:userid", (req, res) => {
-  const userId = req.params.userid;
-  res.json({ banned: bannedUsers.has(userId) });
+// Check if user is banned (for Roblox side)
+app.get("/isBanned/:userId", (req, res) => {
+  const userId = req.params.userId;
+  const isBanned = bannedUsers.has(userId);
+  res.json({ userId, banned: isBanned });
 });
 
-// --- Start server ---
 app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`🌐 Ban server running on port ${PORT}`);
 });
