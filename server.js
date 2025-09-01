@@ -1,26 +1,48 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cors = require("cors");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(bodyParser.json());
 
-// store commands from discord
-let commandQueue = [];
+// Store banned users in memory
+let bannedUsers = [];
 
-// Roblox fetches pending commands
-app.get("/commands", (req, res) => {
-  res.json(commandQueue);
-  commandQueue = []; // clear after sending
+// ✅ Ban a user
+app.post("/ban", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "UserId required" });
+  }
+  if (!bannedUsers.includes(userId)) {
+    bannedUsers.push(userId);
+  }
+  console.log(`Banned user: ${userId}`);
+  res.json({ success: true });
 });
 
-// Discord bot posts commands
-app.post("/command", (req, res) => {
-  const { command, args } = req.body;
-  if (!command) return res.status(400).json({ error: "Command required" });
-
-  commandQueue.push({ command, args });
+// ✅ Unban a user
+app.post("/unban", (req, res) => {
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "UserId required" });
+  }
+  bannedUsers = bannedUsers.filter((id) => id !== userId);
+  console.log(`Unbanned user: ${userId}`);
   res.json({ success: true });
+});
+
+// ✅ Get all banned users (used by Roblox Studio)
+app.get("/bans", (req, res) => {
+  res.json(bannedUsers);
+});
+
+// Default root route
+app.get("/", (req, res) => {
+  res.send("✅ Roblox Ban Server is running");
 });
 
 app.listen(PORT, () => {
