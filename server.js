@@ -1,60 +1,56 @@
 const express = require("express");
-const fs = require("fs");
+const cors = require("cors");
+
 const app = express();
-const port = 3000;
+app.use(cors());
+app.use(express.json());
 
-const BAN_FILE = "bans.json";
+// ✅ Use Render's assigned port OR fallback to 3000 locally
+const PORT = process.env.PORT || 3000;
 
-// load existing bans from file
+// --- In-memory ban list ---
 let bannedUsers = new Set();
-if (fs.existsSync(BAN_FILE)) {
-  try {
-    const data = JSON.parse(fs.readFileSync(BAN_FILE, "utf8"));
-    bannedUsers = new Set(data);
-  } catch (err) {
-    console.error("Failed to load bans:", err);
-  }
-}
 
-// helper to save bans
-function saveBans() {
-  fs.writeFileSync(BAN_FILE, JSON.stringify([...bannedUsers], null, 2));
-}
+// --- Shutdown flag ---
+let shutdownFlag = false;
 
-// shutdown endpoint
+// Root route (for testing)
+app.get("/", (req, res) => {
+  res.send("✅ Roblox ban/shutdown server is running!");
+});
+
+// --- Shutdown endpoints ---
 app.get("/shutdown", (req, res) => {
-  console.log("Shutdown requested!");
+  shutdownFlag = true;
+  console.log("⚠️ Shutdown requested!");
   res.send("Shutdown signal sent!");
 });
 
-// ban endpoint
-app.get("/ban/:userid", (req, res) => {
+app.get("/shutdownstatus", (req, res) => {
+  res.json({ shutdown: shutdownFlag });
+});
+
+// --- Ban endpoints ---
+app.post("/ban/:userid", (req, res) => {
   const userId = req.params.userid;
   bannedUsers.add(userId);
-  saveBans();
-  console.log(`User ${userId} banned.`);
-  res.send(`User ${userId} banned.`);
+  console.log(`🚫 User ${userId} banned`);
+  res.send(`User ${userId} has been banned.`);
 });
 
-// unban endpoint
-app.get("/unban/:userid", (req, res) => {
+app.post("/unban/:userid", (req, res) => {
   const userId = req.params.userid;
   bannedUsers.delete(userId);
-  saveBans();
-  console.log(`User ${userId} unbanned.`);
-  res.send(`User ${userId} unbanned.`);
+  console.log(`✅ User ${userId} unbanned`);
+  res.send(`User ${userId} has been unbanned.`);
 });
 
-// endpoint Roblox calls to check bans
-app.get("/isBanned/:userid", (req, res) => {
+app.get("/banstatus/:userid", (req, res) => {
   const userId = req.params.userid;
-  if (bannedUsers.has(userId)) {
-    res.send("true");
-  } else {
-    res.send("false");
-  }
+  res.json({ banned: bannedUsers.has(userId) });
 });
 
-app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}`);
+// --- Start server ---
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
 });
